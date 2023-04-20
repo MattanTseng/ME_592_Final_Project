@@ -182,7 +182,7 @@ from torch import optim
 import torch.nn.functional as F
 import time
 
-model = ViT(image_size=64, patch_size=16, num_classes=1, channels=3, dim=128, depth=4, heads=8, mlp_dim=128)
+model = ViT(image_size=64, patch_size=16, num_classes=2, channels=3, dim=128, depth=4, heads=8, mlp_dim=128)
 optimizer = optim.Adam(model.parameters(), lr=3e-4)
 # %%
 sum(p.numel() for p in model.parameters())
@@ -197,8 +197,13 @@ def train_epoch(model, optimizer, data_loader, loss_history, device):
         data = data.to(device)
         target = target.to(device)
         optimizer.zero_grad()
-        output = F.log_softmax(model(data), dim=1)
-        loss = F.nll_loss(output, target)
+
+        output = model(data)
+
+
+
+        loss = F.cross_entropy(output, target)
+
         loss.backward()
         optimizer.step()
 
@@ -213,7 +218,7 @@ def train_epoch(model, optimizer, data_loader, loss_history, device):
 use_cuda = torch.cuda.is_available()
 device = torch.device('cuda' if use_cuda else 'cpu')
 
-N_EPOCHS = 3
+N_EPOCHS = 1
 
 start_time = time.time()
 
@@ -225,4 +230,3 @@ for epoch in range(1, N_EPOCHS + 1):
     print('Epoch:', epoch)
     train_epoch(model, optimizer, train_loader, train_loss_history, device)
     # evaluate(model, test_loader, test_loss_history, device)
-
