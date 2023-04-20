@@ -19,7 +19,7 @@ class ChestImage64(Dataset):
     def __getitem__(self, index):
         img_path = os.path.join(self.root_path, self.annotation.iloc[index]['Image_Path'])
         image = Image.open(img_path).convert("RGB")
-        label = torch.tensor(self.annotation.iloc[index]["Enlarged Cardiomediastinum"])
+        label = torch.tensor(self.annotation.iloc[index]["Enlarged Cardiomediastinum"], dtype=torch.long)
 
         if self.transform:
             image = self.transform(image)
