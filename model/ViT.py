@@ -4,8 +4,6 @@ from torch import nn
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 
-# helpers
-
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
@@ -133,100 +131,3 @@ class ViT(nn.Module):
 
         x = self.to_latent(x)
         return self.mlp_head(x)
-
-
-# %%
-torch.manual_seed(42)
-import torchvision
-
-
-
-## define the data
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
-from utils.dataset import ChestImage64
-import matplotlib.pyplot as plt
-import numpy as np
-from torch.utils.data import random_split, DataLoader
-#%%
-
-from torchvision.datasets import MNIST
-csv_path = '../Data/64px Images/train_labels_64p.csv'
-root_path = '../Data/64px Images'
-#%%
-transform = Compose([
-    Resize((64, 64)),
-    ToTensor(),
-    Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
-#%%
-dataset = ChestImage64(csv_path=csv_path, root_path=root_path, class_name="Frontal", transform=transform)
-#%%
-
-train_size = int(0.7 * len(dataset))
-val_size = int(0.1 * len(dataset))
-test_size = int(0.2 * len(dataset))
-
-train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
-
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=True)
-
-
-
-
-
-
-
-from torch import optim
-import torch.nn.functional as F
-import time
-
-model = ViT(image_size=64, patch_size=16, num_classes=2, channels=3, dim=128, depth=4, heads=8, mlp_dim=128)
-optimizer = optim.Adam(model.parameters(), lr=3e-4)
-# %%
-sum(p.numel() for p in model.parameters())
-
-
-# %%
-def train_epoch(model, optimizer, data_loader, loss_history, device):
-    total_samples = len(data_loader.dataset)
-    model.train()
-
-    for i, (data, target) in enumerate(data_loader):
-        data = data.to(device)
-        target = target.to(device)
-        optimizer.zero_grad()
-
-        output = model(data)
-
-
-
-        loss = F.cross_entropy(output, target)
-
-        loss.backward()
-        optimizer.step()
-
-        if i % 100 == 0:
-            print('[' + '{:5}'.format(i * len(data)) + '/' + '{:5}'.format(total_samples) +
-                  ' (' + '{:3.0f}'.format(100 * i / len(data_loader)) + '%)]  Loss: ' +
-                  '{:6.4f}'.format(loss.item()))
-            loss_history.append(loss.item())
-
-
-# %%
-use_cuda = torch.cuda.is_available()
-device = torch.device('cuda' if use_cuda else 'cpu')
-
-N_EPOCHS = 1
-
-start_time = time.time()
-
-
-model.to(device)
-
-train_loss_history, test_loss_history = [], []
-for epoch in range(1, N_EPOCHS + 1):
-    print('Epoch:', epoch)
-    train_epoch(model, optimizer, train_loader, train_loss_history, device)
-    # evaluate(model, test_loader, test_loss_history, device)
